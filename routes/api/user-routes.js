@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { User } = require('../../models');
 
 router.get('/', (req, res) => {
-  User.findAll()
+  User.findAll({ attributes: { exclude: ['password'] } })
     .then(dbUserData => res.json(dbUserData))
     .catch(err => {
       console.log(err);
@@ -41,6 +41,27 @@ router.post('/', (req, res) => {
       console.log(err);
       res.status(500).json(err);
     });
+});
+
+router.post('/login', (req, res) => {
+  User.findOne({
+    where: {
+      email: req.body.email
+    }
+  }).then(async dbUserData => {
+    if (!dbUserData) {
+      res.status(400).json({ message: 'No user with that email addresss!' });
+      return;
+    }
+
+    const validPassword = await dbUserData.checkPassword(req.body.password);
+    if (!validPassword) {
+      res.status(400).json({ message: 'Incorrect password!' });
+      return;
+    }
+
+    res.json({ user: dbUserData, message: 'You are now logged in!' });
+  });
 });
 
 router.put('/:id', (req, res) => {
